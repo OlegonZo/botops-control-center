@@ -11,11 +11,11 @@ separate - because a running bot is not proof of an edge.
 
 https://github.com/user-attachments/assets/b0a91b8a-6f0b-4c52-81f5-b79fd0aa2c9d
 
-[Download the 38-second WebM walkthrough](./demo/botops-control-center-demo-narrated.webm)
+[Download WebM](./demo/botops-control-center-demo-narrated.webm) · [Download MP4](./demo/botops-control-center-demo-male-soft-voice.mp4)
 
-The walkthrough covers Overview, Fleet pulse, guarded operations, Runbooks,
-and Architecture using demo telemetry only. It does not place orders or use
-live capital.
+The 38-second walkthrough covers Overview, Fleet pulse, guarded operations,
+Runbooks, and Architecture using demo telemetry only. It does not place orders
+or use live capital.
 
 ## Why this is a useful engineering sample
 
