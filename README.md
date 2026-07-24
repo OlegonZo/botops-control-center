@@ -9,7 +9,9 @@ separate - because a running bot is not proof of an edge.
 
 ## Narrated demo video
 
-[Watch the 38-second walkthrough with Russian narration](./demo/botops-control-center-demo-narrated.webm)
+https://github.com/user-attachments/assets/b0a91b8a-6f0b-4c52-81f5-b79fd0aa2c9d
+
+[Download the 38-second WebM walkthrough](./demo/botops-control-center-demo-narrated.webm)
 
 The walkthrough covers Overview, Fleet pulse, guarded operations, Runbooks,
 and Architecture using demo telemetry only. It does not place orders or use
