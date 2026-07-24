@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type Status = "Running" | "Paused" | "Complete" | "Blocked";
 type View = "Overview" | "Runbooks" | "Architecture";
+type BriefState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "ready"; text: string; mode: "ai" | "demo" }
+  | { kind: "error"; text: string };
 
 type Bot = {
   id: string;
@@ -35,7 +40,7 @@ const bots: Bot[] = [
     result: "Collecting",
     accent: "#b7f34c",
     process: "Healthy",
-    sample: "24 closed Â· 1 open",
+    sample: "24 closed Ğ’Â· 1 open",
     guardrail: "Paper only",
     next: "Hold parameters until the preregistered sample is complete.",
   },
@@ -48,7 +53,7 @@ const bots: Bot[] = [
     status: "Paused",
     freshness: "3 days",
     evidence: "10 / 30 positions",
-    result: "Interim âˆ’",
+    result: "Interim Ğ²â‚¬â€™",
     accent: "#f1be58",
     process: "Stopped",
     sample: "Small sample",
@@ -156,13 +161,57 @@ function Overview({
   setSelectedId,
   briefVisible,
   setBriefVisible,
+  brief,
+  setBrief,
 }: {
   selected: Bot;
   selectedId: string;
   setSelectedId: (id: string) => void;
   briefVisible: boolean;
   setBriefVisible: (value: boolean) => void;
+  brief: BriefState;
+  setBrief: (value: BriefState) => void;
 }) {
+  async function generateBrief() {
+    setBriefVisible(true);
+    setBrief({ kind: "loading" });
+
+    try {
+      const response = await fetch("/api/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botId: selected.id }),
+      });
+      const payload = (await response.json()) as {
+        brief?: unknown;
+        error?: unknown;
+        mode?: unknown;
+      };
+
+      if (
+        !response.ok ||
+        typeof payload.brief !== "string" ||
+        (payload.mode !== "ai" && payload.mode !== "demo")
+      ) {
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : "The AI summary service is temporarily unavailable.",
+        );
+      }
+
+      setBrief({ kind: "ready", text: payload.brief, mode: payload.mode });
+    } catch (error) {
+      setBrief({
+        kind: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "The AI summary service is temporarily unavailable.",
+      });
+    }
+  }
+
   return (
     <>
       <section className="hero">
@@ -176,7 +225,7 @@ function Overview({
         </div>
         <div className="hero-status">
           <span className="live-indicator">CONTROL PLANE HEALTHY</span>
-          <p className="sync-time">Demo snapshot Â· 23 Jul 2026</p>
+          <p className="sync-time">Demo snapshot Ğ’Â· 23 Jul 2026</p>
         </div>
       </section>
 
@@ -184,7 +233,7 @@ function Overview({
         {[
           ["Active agents", "1 / 4", "01", "One collecting evidence"],
           ["Fresh signals", "24h", "25", "Forward-test cohort"],
-          ["Open incidents", "âˆ’1 today", "01", "RPC provider throttling"],
+          ["Open incidents", "Ğ²â‚¬â€™1 today", "01", "RPC provider throttling"],
           ["Capital at risk", "guarded", "$0", "Paper / shadow only"],
         ].map(([label, delta, value, note]) => (
           <article className="metric-card" key={label}>
@@ -226,7 +275,7 @@ function Overview({
                   <span>
                     <span className="bot-name">{bot.name}</span>
                     <span className="bot-meta">
-                      {bot.venue} Â· {bot.strategy}
+                      {bot.venue} Ğ’Â· {bot.strategy}
                     </span>
                   </span>
                 </div>
@@ -241,7 +290,7 @@ function Overview({
                   <strong>{bot.result}</strong>
                   <span>research state</span>
                 </div>
-                <span className="arrow">â†’</span>
+                <span className="arrow">Ğ²â€ â€™</span>
               </button>
             ))}
           </div>
@@ -287,15 +336,35 @@ function Overview({
               <button
                 type="button"
                 className="brief-button"
-                onClick={() => setBriefVisible(!briefVisible)}
+                onClick={() => {
+                  if (briefVisible && brief.kind !== "loading") {
+                    setBriefVisible(false);
+                    return;
+                  }
+                  void generateBrief();
+                }}
+                disabled={brief.kind === "loading"}
               >
-                {briefVisible ? "HIDE OPS BRIEF" : "GENERATE OPS BRIEF"}
+                {brief.kind === "loading"
+                  ? "GENERATING AI BRIEF"
+                  : briefVisible
+                    ? "HIDE OPS BRIEF"
+                    : "GENERATE OPS BRIEF"}
               </button>
               {briefVisible && (
                 <p className="brief">
-                  <strong>Recommended next action:</strong> {selected.next} This
-                  is a deterministic demo brief; OpenAI enrichment is
-                  intentionally disconnected until a local key is configured.
+                  {brief.kind === "loading" && "Preparing a concise AI operations brief..."}
+                  {brief.kind === "ready" && (
+                    <>
+                      <strong>
+                        {brief.mode === "ai"
+                          ? "AI operations brief:"
+                          : "Demo operations brief:"}
+                      </strong>{" "}
+                      {brief.text}
+                    </>
+                  )}
+                  {brief.kind === "error" && <>{brief.text}</>}
                 </p>
               )}
             </div>
@@ -388,4 +457,249 @@ function Runbooks() {
             stale workers, rate limits, and unexplained results.
           </p>
         </div>
-        <span className="demo-pill">3 ACTIVE RUNBOOKS</span>8÷m­¢G§²ÚîÆ­yÖ7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7B×6W'fW"ÖFöÒ×vV'6´’ã"ãb‡&V7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7D’ã"ãb’‡vV'6´Rã‚ãB†W6'V–ÆDã#‚ã’’’‡&V7D’ã"ãb’‡G—W67&—DRã’ã2’‡f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã’“ ¢FWVæFVæ6–W3 ¢tVç–2÷&V7Bs¢ãã"†æW‡Dbã"ãb„&&VÂö6÷&Trã#’ãr’‡&V7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7D’ã"ãb’’‡&V7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7D’ã"ãb¢tfW&6VÂöörs¢ã‚ã`¢tf—FV§2÷ÇVv–â×&V7Bs¢bãã"‡f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã’¢–ÖvR×6—¦S¢"ãã ¢—FG"æ§3¢"ãBã ¢Öv–2×7G&–æs¢ã3ã#¢&V7C¢’ã"ã`¢&V7BÖFöÓ¢’ã"ãb‡&V7D’ã"ãb¢f—FS¢‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã¢f—FR×ÇVv–âÖ6öÖÖöæ§3¢ãã@¢f—FR×G66öæf–r×F‡3¢bãã‡G—W67&—DRã’ã2’‡f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã’¢vV"×f—FÇ3¢Bã"ã@¢÷F–öæÄFWVæFVæ6–W3 ¢tf—FV§2÷ÇVv–â×'62s¢ãRã#b‡&V7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7B×6W'fW"ÖFöÒ×vV'6´’ã"ãb‡&V7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7D’ã"ãb’‡vV'6´Rã‚ãB†W6'V–ÆDã#‚ã’’’‡&V7D’ã"ãb’‡f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã’¢&V7B×6W'fW"ÖFöÒ×vV'6³¢’ã"ãb‡&V7BÖFöÔ’ã"ãb‡&V7D’ã"ãb’’‡&V7D’ã"ãb’‡vV'6´Rã‚ãB†W6'V–ÆDã#‚ã’¢G&ç6—F—fUVW$FWVæFVæ6–W3 ¢ÒæW‡@¢Ò7W÷'G2Ö6öÆ÷ ¢ÒG—W67&—@ ¢f—FR×ÇVv–âÖ6öÖÖöæ§4ããC ¢FWVæFVæ6–W3 ¢6÷&ã¢‚ãrã ¢Öv–2×7G&–æs¢ã3ã#¢f—FR×ÇVv–âÖG–æÖ–2Ö–×÷'C¢ãbã  ¢f—FR×ÇVv–âÖG–æÖ–2Ö–×÷'Dãbã ¢FWVæFVæ6–W3 ¢6÷&ã¢‚ãrã ¢W2ÖÖöGVÆRÖÆW†W#¢ãrã ¢f7BÖvÆö#¢2ã2ã0¢Öv–2×7G&–æs¢ã3ã# ¢f—FR×G66öæf–r×F‡4bãã‡G—W67&—DRã’ã2’‡f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã’“ ¢FWVæFVæ6–W3 ¢FV'Vs¢BãBã0¢vÆö'&Wƒ¢ãã ¢G66öæf6³¢2ããb‡G—W67&—DRã’ã2¢f—FS¢‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã¢G&ç6—F—fUVW$FWVæFVæ6–W3 ¢Ò7W÷'G2Ö6öÆ÷ ¢ÒG—W67&—@ ¢f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã“ ¢FWVæFVæ6–W3 ¢Æ–v‡Fæ–æv773¢ã32ã ¢–6öÖF6ƒ¢BããP¢÷7F773¢‚ãRã# ¢&öÆÆF÷vã¢ãã¢F–ç–vÆö&'“¢ã"ãp¢÷F–öæÄFWVæFVæ6–W3 ¢tG—W2öæöFRs¢#"ã’ã¢W6'V–ÆC¢ã#‚ã¢g6WfVçG3¢"ã2ã0¢¦—F“¢"ãrã ¢FW'6W#¢RãC’ã ¢G7ƒ¢Bã#2ã ¢f—FVgTãã2‡f—FT‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã’“ ¢÷F–öæÄFWVæFVæ6–W3 ¢f—FS¢‚ãã2„G—W2öæöFT#"ã’ã’’†W6'V–ÆDã#‚ã’†¦—F”"ãrã’‡FW'6W$RãC’ã’‡G7„Bã#2ã ¢vF6‡6´"ãRã# ¢FWVæFVæ6–W3 ¢w&6VgVÂÖg3¢Bã"ã ¢vV"×f—FÇ4Bã"ãC¢·Ğ ¢vV'6²×6÷W&6W42ãRã¢·Ğ ¢vV'6´Rã‚ãB†W6'V–ÆDã#‚ã“ ¢FWVæFVæ6–W3 ¢tG—W2öW7G&VRs¢ãã¢tG—W2ö§6öâ×66†VÖs¢rããP¢tvV&76VÖ&Ç–§2ö7Bs¢ãBã¢tvV&76VÖ&Ç–§2÷v6ÒÖVF—Bs¢ãBã¢tvV&76VÖ&Ç–§2÷v6Ò×'6W"s¢ãBã¢6÷&ã¢‚ãrã ¢6÷&âÖ–×÷'B×†6W3¢ããB†6÷&ä‚ãrã¢'&÷w6W'6Æ—7C¢Bã#‚ãp¢6‡&öÖR×G&6RÖWfVçC¢ãã@¢Væ†æ6VB×&W6öÇfS¢Rã#Bã0¢W2ÖÖöGVÆRÖÆW†W#¢"ã2ã¢W6Æ–çB×66÷S¢Rãã¢WfVçG3¢2ã2ã ¢w&6VgVÂÖg3¢Bã"ã¢ÆöFW"×'VææW#¢Bã2ã ¢Ö–ÖRÖF#¢ãSBã ¢Ö–æ–Ö—¦W"×vV'6²×ÇVv–ã¢Rãbã†W6'V–ÆDã#‚ã’‡vV'6´Rã‚ãB†W6'V–ÆDã#‚ã’¢æVòÖ7–æ3¢"ãbã ¢66†VÖ×WF–Ç3¢Bã2ã0¢F&ÆS¢"ã2ã0¢vF6‡6³¢"ãRã ¢vV'6²×6÷W&6W3¢2ãRã¢G&ç6—F—fUVW$FWVæFVæ6–W3 ¢ÒtÖ–æ–g’Ö‡FÖÂöæöFRp¢Òt7v2ö6÷&Rp¢Òt7v2ö772p¢Òt7v2ö‡FÖÂp¢Ò6ÆVâÖ770¢Ò776ææğ¢Ò776ğ¢ÒW6'V–Æ@¢Ò‡FÖÂÖÖ–æ–f–W"×FW'6W ¢ÒÆ–v‡Fæ–æv770¢Ò÷7F770¢ÒVvÆ–g’Ö§0 ¢v†–6‚Ö&÷†VB×&–Ö—F—fTãã ¢FWVæFVæ6–W3 ¢—2Ö&–v–çC¢ãã ¢—2Ö&ööÆVâÖö&¦V7C¢ã"ã ¢—2ÖçVÖ&W"Öö&¦V7C¢ãã¢—2×7G&–æs¢ãã¢—2×7–Ö&öÃ¢ãã ¢v†–6‚Ö'V–ÇF–â×G—Tã"ã ¢FWVæFVæ6–W3 ¢6ÆÂÖ&÷VæC¢ãã@¢gVæ7F–öâç&÷F÷G—RææÖS¢ã"ã ¢†2×F÷7G&–æwFs¢ãã ¢—2Ö7–æ2ÖgVæ7F–öã¢"ãã¢—2ÖFFRÖö&¦V7C¢ãã ¢—2Öf–æÆ—¦F–öç&Vv—7G'“¢ãã¢—2ÖvVæW&F÷"ÖgVæ7F–öã¢ãã ¢—2×&VvWƒ¢ã"ã¢—2×vV·&Vc¢ãã¢—6'&“¢"ããP¢v†–6‚Ö&÷†VB×&–Ö—F—fS¢ãã¢v†–6‚Ö6öÆÆV7F–öã¢ãã ¢v†–6‚×G—VBÖ'&“¢ãã#  ¢v†–6‚Ö6öÆÆV7F–öäãã# ¢FWVæFVæ6–W3 ¢—2ÖÖ¢"ãã0¢—2×6WC¢"ãã0¢—2×vV¶Ö¢"ãã ¢—2×vV·6WC¢"ãã@ ¢v†–6‚×G—VBÖ'&”ãã## ¢FWVæFVæ6–W3 ¢f–Æ&ÆR×G—VBÖ'&—3¢ããp¢6ÆÂÖ&–æC¢ãã¢6ÆÂÖ&÷VæC¢ãã@¢f÷"ÖV6ƒ¢ã2ãP¢vWB×&÷Fó¢ãã¢v÷C¢ã"ã ¢†2×F÷7G&–æwFs¢ãã  ¢v†–6„"ãã# ¢FWVæFVæ6–W3 ¢—6W†S¢"ãã  ¢v÷&B×w&ã"ãS¢·Ğ ¢v÷&¶W&Dã##cSRã ¢÷F–öæÄFWVæFVæ6–W3 ¢t6Æ÷VFfÆ&R÷v÷&¶W&BÖF'v–âÓcBs¢ã##cSRã¢t6Æ÷VFfÆ&R÷v÷&¶W&BÖF'v–âÖ&ÓcBs¢ã##cSRã¢t6Æ÷VFfÆ&R÷v÷&¶W&BÖÆ–çW‚ÓcBs¢ã##cSRã¢t6Æ÷VFfÆ&R÷v÷&¶W&BÖÆ–çW‚Ö&ÓcBs¢ã##cSRã¢t6Æ÷VFfÆ&R÷v÷&¶W&B×v–æF÷w2ÓcBs¢ã##cSRã ¢w&ævÆW$Bã“"ã ¢FWVæFVæ6–W3 ¢t6Æ÷VFfÆ&Rö·bÖ76WBÖ†æFÆW"s¢ãRã ¢t6Æ÷VFfÆ&R÷VæVçb×&W6WBs¢"ãbã‡VæVçd"ãã×&2ã#B’‡v÷&¶W&Dã##cSRã¢&Æ¶S2×v6Ó¢"ããP¢W6'V–ÆC¢ã#rã0¢Ö–æ–fÆ&S¢Bã##cSRã ¢F‚×Fò×&VvW‡¢bã2ã ¢VæVçc¢"ãã×&2ã#@¢v÷&¶W&C¢ã##cSRã¢÷F–öæÄFWVæFVæ6–W3 ¢g6WfVçG3¢"ã2ã0¢G&ç6—F—fUVW$FWVæFVæ6–W3 ¢Ò'VffW'WF–À¢ÒWFbÓ‚×fÆ–FFP ¢w4‚ã‚ã¢·Ğ ¢–ÆÆ—7D2ãã¢·Ğ ¢–ö7Fò×VWVTãã¢·Ğ ¢–övÖÆ–÷WD2ã"ã¢·Ğ ¢–÷V6‚Ö6÷&Tã2ã3 ¢FWVæFVæ6–W3 ¢t÷–ç72öW†6WF–öâs¢ã"ã0¢W'&÷"×7F6²×'6W"ÖW3¢ããP ¢–÷V6„BããÖ&WFã ¢FWVæFVæ6–W3 ¢t÷–ç72ö6öÆ÷'2s¢Bãã`¢t÷–ç72öGV×W"s¢ãbãP¢t7VVBÖ†–v†Æ–v‡Bö6÷&Rs¢ã"ãp¢6öö¶–S¢ãã¢–÷V6‚Ö6÷&S¢ã2ã0 ¢¦öB×fÆ–FF–öâÖW'&÷$Bãã"‡¦öDBãBã2“ ¢FWVæFVæ6–W3 ¢¦öC¢BãBã0 ¢¦öDBãBã3¢·Ğ
+        <span className="demo-pill">3 ACTIVE RUNBOOKS</span>
+      </div>
+      <div className="runbook-grid">
+        {runbooks.map((runbook) => (
+          <article className="runbook-card" key={runbook.index}>
+            <span className="runbook-index">{runbook.index}</span>
+            <h3>{runbook.title}</h3>
+            <p>{runbook.copy}</p>
+            <ol className="step-list">
+              {runbook.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </article>
+        ))}
+      </div>
+      <div className="technical-strip">
+        <div>
+          <span className="tech-label">Recovery principle</span>
+          <div className="tech-value">
+            Observe Ğ²â€ â€™ isolate Ğ²â€ â€™ restart once Ğ²â€ â€™ verify freshness
+          </div>
+        </div>
+        <div>
+          <span className="tech-label">Change policy</span>
+          <div className="tech-value">No tuning during incident response</div>
+        </div>
+        <div>
+          <span className="tech-label">Escalation</span>
+          <div className="tech-value">
+            Preserve stderr and state before intervention
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Architecture() {
+  return (
+    <section className="section-page">
+      <div className="section-intro">
+        <div>
+          <p className="eyebrow">ENGINEERING / SYSTEM DESIGN</p>
+          <h1>Simple paths. Explicit boundaries.</h1>
+          <p>
+            Collection, normalization, evidence checks, and presentation stay
+            separate so operational health never gets confused with strategy
+            edge.
+          </p>
+        </div>
+        <span className="outline-pill">PORTFOLIO BUILD v0.1</span>
+      </div>
+      <div className="architecture-grid">
+        <article className="panel">
+          <header className="panel-header">
+            <div className="section-heading">
+              <span className="section-dot" />
+              <h2>Telemetry path</h2>
+            </div>
+            <span className="panel-kicker">READ ONLY</span>
+          </header>
+          <div className="architecture-body">
+            <div className="system-map">
+              {[
+                [
+                  "01 / Collectors",
+                  "Process heartbeats, logs, snapshots, provider status.",
+                ],
+                [
+                  "02 / Normalization API",
+                  "Typed health records and consistent freshness rules.",
+                ],
+                [
+                  "03 / Evidence engine",
+                  "Closed versus open outcomes, thresholds, guardrails.",
+                ],
+                [
+                  "04 / Control center",
+                  "Operator-focused views, incident context, runbooks.",
+                ],
+              ].map(([title, copy]) => (
+                <div className="system-node" key={title}>
+                  <strong>{title}</strong>
+                  <p>{copy}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </article>
+        <article className="panel">
+          <header className="panel-header">
+            <div className="section-heading">
+              <span className="section-dot" />
+              <h2>Implementation stack</h2>
+            </div>
+            <span className="panel-kicker">CLOUDFLARE READY</span>
+          </header>
+          <div className="architecture-body">
+            <p className="hero-copy">
+              The demo ships as a responsive React application with a
+              server-rendered health endpoint and server-only AI operations
+              briefs. Credentials are never exposed to the browser.
+            </p>
+            <div className="stack-list" style={{ marginTop: 18 }}>
+              {[
+                "React 19",
+                "TypeScript",
+                "Next-compatible routing",
+                "Cloudflare Workers",
+                "Typed API",
+                "Accessible UI",
+                "Node tests",
+                "OpenAI Responses API",
+              ].map((tech) => (
+                <span className="mini-tag" key={tech}>
+                  {tech}
+                </span>
+              ))}
+            </div>
+            <div className="detail-grid" style={{ marginTop: 20 }}>
+              {[
+                ["Rendering", "SSR + client"],
+                ["Deployment", "Edge worker"],
+                ["Data mode", "Demo fixture"],
+                ["Secrets", "Server only"],
+              ].map(([label, value]) => (
+                <div className="detail-stat" key={label}>
+                  <span className="detail-label">{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+export function BotOpsDashboard() {
+  const [view, setView] = useState<View>("Overview");
+  const [selectedId, setSelectedId] = useState(bots[0].id);
+  const [briefVisible, setBriefVisible] = useState(false);
+  const [brief, setBrief] = useState<BriefState>({ kind: "idle" });
+  const [apiState, setApiState] = useState("checking");
+
+  const selected = useMemo(
+    () => bots.find((bot) => bot.id === selectedId) ?? bots[0],
+    [selectedId],
+  );
+
+  useEffect(() => {
+    fetch("/api/health")
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then(() => setApiState("online"))
+      .catch(() => setApiState("offline"));
+  }, []);
+
+  useEffect(() => {
+    setBriefVisible(false);
+    setBrief({ kind: "idle" });
+  }, [selectedId]);
+
+  return (
+    <div className="shell">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-lockup">
+            <span className="brand-mark">BO</span>
+            <span>BOTOPS</span>
+            <span className="slash">//</span>
+            <span>CONTROL CENTER</span>
+          </div>
+        </div>
+        <div className="top-actions">
+          <span className="demo-pill">DEMO TELEMETRY</span>
+          <span className="outline-pill">API {apiState.toUpperCase()}</span>
+        </div>
+      </header>
+
+      <div className="layout">
+        <aside className="sidebar">
+          <div>
+            <p className="nav-label">Workspace</p>
+            <nav className="nav-list" aria-label="Dashboard sections">
+              {(["Overview", "Runbooks", "Architecture"] as View[]).map(
+                (item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    className={`nav-button ${view === item ? "active" : ""}`}
+                    onClick={() => setView(item)}
+                    aria-current={view === item ? "page" : undefined}
+                  >
+                    <span>{item}</span>
+                    <span className="nav-badge">
+                      {item === "Overview"
+                        ? "4"
+                        : item === "Runbooks"
+                          ? "3"
+                          : "5"}
+                    </span>
+                  </button>
+                ),
+              )}
+            </nav>
+          </div>
+          <div className="side-card">
+            <span className="detail-label">Safety mode</span>
+            <strong>Read-only by design</strong>
+            <p>
+              No order placement, secrets, or live-capital controls exist in
+              this portfolio demo.
+            </p>
+          </div>
+        </aside>
+
+        <main className="main">
+          {view === "Overview" && (
+            <Overview
+              selected={selected}
+              selectedId={selectedId}
+              setSelectedId={setSelectedId}
+              briefVisible={briefVisible}
+              setBriefVisible={setBriefVisible}
+              brief={brief}
+              setBrief={setBrief}
+            />
+          )}
+          {view === "Runbooks" && <Runbooks />}
+          {view === "Architecture" && <Architecture />}
+
+          <footer className="footer">
+            <span>
+              <strong>BotOps Control Center</strong> Ğ’Â· built for operational
+              clarity
+            </span>
+            <span>Demo data Ğ’Â· no orders Ğ’Â· no investment claims</span>
+          </footer>
+        </main>
+      </div>
+    </div>
+  );
+}
+
