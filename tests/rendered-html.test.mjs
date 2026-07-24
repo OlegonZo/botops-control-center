@@ -52,3 +52,22 @@ test("health endpoint exposes safe demo metadata", async () => {
   assert.equal(body.service, "botops-control-center");
   assert.equal(Object.hasOwn(body, "apiKey"), false);
 });
+
+test("brief endpoint returns a safe demo fallback without runtime configuration", async () => {
+  const response = await worker.fetch(
+    new Request("http://localhost/api/brief", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ botId: "move15" }),
+    }),
+    env,
+    ctx,
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(Object.hasOwn(body, "apiKey"), false);
+  assert.equal(body.mode, "demo");
+  assert.match(body.brief, /Operational fact/i);
+});
+
