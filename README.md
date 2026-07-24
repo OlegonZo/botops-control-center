@@ -7,6 +7,12 @@ separate - because a running bot is not proof of an edge.
 **Live demo:** [botops-control-center-oleg.o38057979.chatgpt.site](https://botops-control-center-oleg.o38057979.chatgpt.site)
 **Repository:** [OlegonZo/botops-control-center](https://github.com/OlegonZo/botops-control-center)
 
+## Demo video
+
+[Watch or download the 31-second MP4 walkthrough](./demo/botops-control-center-demo.mp4)
+
+The walkthrough covers Overview, Runbooks, and Architecture using demo telemetry only; it does not place orders or use live capital.
+
 ## Why this is a useful engineering sample
 
 The project demonstrates an end-to-end slice of production-minded work:
